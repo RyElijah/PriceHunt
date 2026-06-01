@@ -329,10 +329,9 @@ def run_deterministic_pipeline(
         "false",
         "no",
     )
-    demo_on = os.getenv("PRICEHUNT_DEMO", "").strip() in ("1", "true", "yes")
     live_batch: list[dict[str, Any]] = []
 
-    if use_playwright and not demo_on:
+    if use_playwright:
         try:
             from tools.live_search import fetch_live_listings_for_pipeline
             from tools.scraper import MAX_LISTINGS, _filter_by_budget
@@ -361,19 +360,6 @@ def run_deterministic_pipeline(
         except Exception:
             olx_ok = False
             logger.exception("OLX search failed")
-
-    used_demo_fallback = False
-    demo_already_on = os.getenv("PRICEHUNT_DEMO", "").strip() in ("1", "true", "yes")
-    allow_demo_fallback = os.getenv("PRICEHUNT_DEMO_FALLBACK", "").strip() in ("1", "true", "yes")
-    if not all_listings and not demo_already_on and allow_demo_fallback:
-        logger.info("No live listings — retrying with demo data")
-        os.environ["PRICEHUNT_DEMO"] = "1"
-        used_demo_fallback = True
-        try:
-            _merge(search_carousell(query, budget))
-            _merge(search_olx(query, budget))
-        finally:
-            os.environ.pop("PRICEHUNT_DEMO", None)
 
     reset_market_context([L["price"] for L in all_listings])
 
@@ -404,7 +390,7 @@ def run_deterministic_pipeline(
             f"Thanks!"
         )
 
-    live_count = sum(1 for L in scored if "demo-" not in (L.get("url") or ""))
+    live_count = len(scored)
 
     return {
         "query": query,
@@ -417,7 +403,6 @@ def run_deterministic_pipeline(
         "flagged": flagged,
         "top": top,
         "negotiation": negotiation,
-        "used_demo_fallback": used_demo_fallback,
         "live_count": live_count,
     }
 

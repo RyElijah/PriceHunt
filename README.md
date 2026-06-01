@@ -67,7 +67,7 @@ flowchart TB
 | `app.py` | Streamlit entrypoint, sidebar toggles, search button |
 | `agent.py` | LangChain agent, Gemini synthesis, deterministic pipeline |
 | `tools/live_search.py` | Playwright Carousell search, location/seller enrichment |
-| `tools/scraper.py` | Search API for agent tools; demo mode fallback |
+| `tools/scraper.py` | Search API for agent tools; HTTP fallback |
 | `tools/scorer.py` | Per-listing value/trust scores and flags |
 | `tools/intent.py` | Taglish/English query parsing |
 | `tools/relevance.py` | Title/slug relevance vs search query |
@@ -145,7 +145,6 @@ Edit `.env`:
 GOOGLE_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash
 PRICEHUNT_USE_PLAYWRIGHT=1
-PRICEHUNT_DEMO=0
 ```
 
 | Variable | Description |
@@ -153,7 +152,6 @@ PRICEHUNT_DEMO=0
 | `GOOGLE_API_KEY` | Required for AI analysis |
 | `GEMINI_MODEL` | Default `gemini-2.5-flash` |
 | `PRICEHUNT_USE_PLAYWRIGHT` | `1` = live browser search |
-| `PRICEHUNT_DEMO` | `1` = fake listings only (no scrape) |
 | `PRICEHUNT_SELLER_PROFILES` | `1` = fetch seller star ratings (slower) |
 | `PRICEHUNT_FETCH_LOCATIONS` | `1` = fetch meet-up locations from listing pages |
 
@@ -176,7 +174,6 @@ Open the URL shown in the terminal (usually `http://localhost:8501`).
    - **Live search** — turn off only for debugging
    - **Meet-up locations** — seller meet-up places (recommended on)
    - **Seller ratings** — slower; optional
-   - **Demo listings** — sample data when scrape is blocked
 
 First search typically takes **15–40s** depending on toggles; repeat queries may be faster due to in-memory caching.
 

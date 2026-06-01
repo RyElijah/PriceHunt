@@ -2,7 +2,7 @@
 BeautifulSoup-based scrapers for Carousell PH and OLX PH (legacy URLs → Carousell).
 
 Sites often return 403 to datacenter IPs; callers receive [] and an error is logged.
-Set PRICEHUNT_DEMO=1 for sample listings during local development only.
+Use Playwright live search (default) when plain HTTP is blocked.
 """
 
 from __future__ import annotations
@@ -322,55 +322,6 @@ def _filter_by_budget(listings: list[Listing], budget: int) -> list[Listing]:
     return sorted(listings, key=lambda x: int(x.get("price") or 0))[:MAX_LISTINGS]
 
 
-def _demo_listings(query: str, budget: int, source: str) -> list[Listing]:
-    """Sample data for local dev when live scrape is blocked (PRICEHUNT_DEMO=1 only)."""
-    samples = [
-        {
-            "title": f"{query} — Like new, with box",
-            "price": int(budget * 0.85),
-            "location": "Quezon City",
-            "seller_name": "maria_ph",
-            "seller_reviews": 42,
-            "seller_rating": 4.9,
-            "url": f"https://www.carousell.ph/p/demo-{source}-1/",
-            "image_url": "",
-            "source": source,
-        },
-        {
-            "title": f"{query} — Good condition",
-            "price": int(budget * 0.72),
-            "location": "Makati",
-            "seller_name": "juan_seller",
-            "seller_reviews": 8,
-            "seller_rating": 4.6,
-            "url": f"https://www.carousell.ph/p/demo-{source}-2/",
-            "image_url": "",
-            "source": source,
-        },
-        {
-            "title": f"{query} — Well used, negotiable",
-            "price": int(budget * 0.55),
-            "location": "Cebu City",
-            "seller_name": "new_seller_00",
-            "seller_reviews": 0,
-            "url": f"https://www.carousell.ph/p/demo-{source}-3/",
-            "image_url": "",
-            "source": source,
-        },
-        {
-            "title": f"{query} — Suspiciously cheap",
-            "price": max(500, int(budget * 0.25)),
-            "location": "Unknown",
-            "seller_name": "no_reviews",
-            "seller_reviews": 0,
-            "url": f"https://www.carousell.ph/p/demo-{source}-4/",
-            "image_url": "",
-            "source": source,
-        },
-    ]
-    return [s for s in samples if s["price"] <= budget]
-
-
 def _use_playwright() -> bool:
     return os.getenv("PRICEHUNT_USE_PLAYWRIGHT", "1").strip() not in ("0", "false", "no")
 
@@ -382,10 +333,6 @@ def search_carousell(query: str, budget: int) -> list[Listing]:
     query = (query or "").strip()
     if not query:
         return []
-
-    if os.getenv("PRICEHUNT_DEMO", "").strip() in ("1", "true", "yes"):
-        logger.info("Carousell: using demo data (PRICEHUNT_DEMO)")
-        return _demo_listings(query, int(budget), "carousell")
 
     if _use_playwright():
         try:
@@ -434,10 +381,6 @@ def search_olx(query: str, budget: int) -> list[Listing]:
     query = (query or "").strip()
     if not query:
         return []
-
-    if os.getenv("PRICEHUNT_DEMO", "").strip() in ("1", "true", "yes"):
-        logger.info("OLX: using demo data (PRICEHUNT_DEMO)")
-        return _demo_listings(query, int(budget), "olx")
 
     if _use_playwright():
         try:

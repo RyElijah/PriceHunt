@@ -127,13 +127,7 @@ with st.sidebar:
     )
     os.environ["PRICEHUNT_SELLER_PROFILES"] = "1" if seller_profiles else "0"
 
-    demo_mode = st.toggle("Demo listings only", value=False)
-    if demo_mode:
-        os.environ["PRICEHUNT_DEMO"] = "1"
-    else:
-        os.environ.pop("PRICEHUNT_DEMO", None)
-
-    if live_mode and not demo_mode:
+    if live_mode:
         st.caption("Carousell + OLX via live browser")
 
     st.divider()
@@ -279,8 +273,8 @@ if search_clicked:
                     )
                 if not data.get("listings"):
                     st.warning(
-                        "No live listings returned. Keep **Live search** on, disable **Demo listings**, "
-                        "try a higher budget, or run: `py -m playwright install chromium`"
+                        "No live listings returned. Keep **Live search** on, try a higher budget, "
+                        "or run: `py -m playwright install chromium`"
                     )
             except Exception as exc:
                 st.error(f"Search failed: {exc}")

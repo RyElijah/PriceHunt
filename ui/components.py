@@ -253,17 +253,12 @@ def render_results(data: ResultData) -> None:
             f"No listings found for **{query}** under ₱{int(data.get('budget', 0)):,}."
         )
         st.info(
-            "Turn on **Demo listings** in the sidebar (live Carousell/OLX often block "
-            "automated searches), or try a higher budget / broader search term."
+            "Enable **Live search (browser)** in the sidebar, try a higher budget, "
+            "or run `playwright install chromium` if needed."
         )
         return
 
-    if data.get("used_demo_fallback"):
-        st.info(
-            "Live scraping returned nothing — showing **sample demo listings**. "
-            "Enable **Live search (browser)** and run `playwright install chromium` if needed."
-        )
-    elif int(data.get("live_count") or 0) > 0:
+    if int(data.get("live_count") or 0) > 0:
         st.caption(
             f"**{data['live_count']} live listing(s)** from Carousell — links open real pages. "
             "First search may take ~10–15 seconds."
