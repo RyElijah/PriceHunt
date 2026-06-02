@@ -228,11 +228,6 @@ Create the repo on GitHub first: **New repository** → name it (e.g. `pricehunt
 
 ---
 
-## License
-
-Add your chosen license (e.g. MIT) in a `LICENSE` file if you publish publicly.
-
----
 
 ## Troubleshooting
 
