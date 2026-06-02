@@ -107,7 +107,7 @@ flowchart TB
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pricehunt.git
+git clone https://github.com/RyElijah/PriceHunt.git
 cd pricehunt
 ```
 
@@ -215,6 +215,16 @@ Create the repo on GitHub first: **New repository** → name it (e.g. `pricehunt
 - Respect Carousell/OLX terms of service; use reasonable request rates (built-in throttling and caching).
 - Listings are third-party; always verify on the official listing page before paying.
 - AI advice is not a guarantee of safety or legality of a deal.
+
+---
+
+## Project documentation (course submission)
+
+| Document | Path |
+|----------|------|
+| **Project report (5–8 pages)** | [`docs/PROJECT_REPORT.md`](docs/PROJECT_REPORT.md) → export to PDF |
+| **Demo video script (3–5 min)** | [`docs/DEMO_VIDEO_SCRIPT.md`](docs/DEMO_VIDEO_SCRIPT.md) |
+| **Submission checklist** | [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) |
 
 ---
 
