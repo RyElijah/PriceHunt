@@ -105,7 +105,14 @@ class ListingInput(BaseModel):
 
 def _track_listings(batch: list[dict[str, Any]]) -> None:
     global _session_listings
-    _session_listings.extend(batch)
+    seen = {L.get("url") for L in _session_listings if L.get("url")}
+    for item in batch:
+        url = item.get("url")
+        if url and url in seen:
+            continue
+        if url:
+            seen.add(url)
+        _session_listings.append(item)
     reset_market_context([int(L["price"]) for L in _session_listings if L.get("price")])
 
 
@@ -487,6 +494,62 @@ def format_pipeline_response(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_data_from_session_listings(
+    query: str,
+    budget: int,
+    *,
+    query_raw: str = "",
+    query_corrected: bool = False,
+    preferences: str = "",
+    user_message: str = "",
+    interpreted: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build pipeline-shaped result dict from listings collected by agent tools."""
+    global _session_listings
+    listings_batch = list(_session_listings)
+    reset_market_context([int(L["price"]) for L in listings_batch if L.get("price")])
+
+    scored: list[dict[str, Any]] = []
+    for listing in listings_batch:
+        try:
+            scores = score_listing(listing)
+        except Exception:
+            logger.exception("Skipping listing due to score error: %s", listing.get("title"))
+            continue
+        scored.append(
+            {**listing, **scores, "combined": scores["value_score"] + scores["trust_score"]}
+        )
+
+    scored.sort(key=lambda x: x["combined"], reverse=True)
+    flagged = [s for s in scored if s["trust_score"] < 40 or s["value_score"] < 35]
+    top = scored[0] if scored else None
+    negotiation = ""
+    if top:
+        offer = int(top["price"] * 0.88)
+        negotiation = (
+            f"Hi! I'm interested in your listing \"{top['title']}\" listed at ₱{top['price']:,}. "
+            f"Would you consider ₱{offer:,}? I can meet up this week and pay cash. "
+            f"Thanks!"
+        )
+
+    return {
+        "query": query,
+        "query_raw": query_raw or query,
+        "query_corrected": query_corrected,
+        "budget": budget,
+        "carousell_ok": any(L.get("source") == "carousell" for L in scored),
+        "olx_ok": any(L.get("source") == "olx" for L in scored),
+        "listings": scored,
+        "flagged": flagged,
+        "top": top,
+        "negotiation": negotiation,
+        "live_count": len(scored),
+        "preferences": preferences,
+        "user_message": user_message,
+        "interpreted": interpreted or {},
+    }
+
+
 def run_agent(user_input: str, chat_history: list | None = None) -> str:
     """Run the LangChain + Gemini ReAct agent (tool-calling). Tries fallback models on errors."""
     global _session_listings
@@ -536,42 +599,91 @@ def run_pricehunt(
     preferences = str(intent.get("preferences") or "")
 
     query_for_search = query
-
-    data = run_deterministic_pipeline(query_for_search, search_budget, autocorrect=False)
-    data["preferences"] = preferences
-    data["user_message"] = user_message
-    data["interpreted"] = intent
-
-    narrative = ""
     agent_mode = mode == "agent"
+    narrative = ""
+    data: dict[str, Any]
 
-    if has_gemini_api_key():
+    if agent_mode:
+        global _session_listings
+        _session_listings = []
+
+    if agent_mode and has_gemini_api_key():
+        agent_prompt = (
+            f"User request: {user_message}\n"
+            f"Interpreted product keywords for search: {query_for_search}\n"
+            f"Budget: ₱{search_budget:,} PHP\n"
+            f"Preferences: {preferences or 'none'}\n\n"
+            "Required steps:\n"
+            f"1. Call search_carousell(query={query_for_search!r}, budget={search_budget})\n"
+            f"2. Call search_olx(query={query_for_search!r}, budget={search_budget})\n"
+            "3. Call score_listing(listing_json=...) for each listing you will recommend "
+            "(at least the top 5 by price/trust).\n"
+            "4. Respond with TOP PICK, other listings, flagged items, and negotiation message.\n"
+            "Use only data returned from tools. Do not invent listings."
+        )
         try:
-            if agent_mode:
-                agent_prompt = (
-                    f"User request: {user_message}\n"
-                    f"Interpreted product: {query}\n"
-                    f"Budget: ₱{search_budget:,} PHP\n"
-                    f"Preferences: {preferences or 'none'}\n"
-                    "Search live on both platforms and complete the full analysis."
+            narrative = run_agent(agent_prompt, chat_history)
+            data = _build_data_from_session_listings(
+                query_for_search,
+                search_budget,
+                preferences=preferences,
+                user_message=user_message,
+                interpreted=intent,
+            )
+            if not data.get("listings"):
+                logger.warning("Agent tools returned no listings; running hybrid pipeline")
+                data = run_deterministic_pipeline(
+                    query_for_search, search_budget, autocorrect=False
                 )
-                narrative = run_agent(agent_prompt, chat_history)
-            else:
-                narrative = synthesize_with_gemini(user_message, data, chat_history)
+                data["preferences"] = preferences
+                data["user_message"] = user_message
+                data["interpreted"] = intent
         except Exception as exc:
-            logger.exception("Gemini layer failed")
+            logger.exception("Agent mode failed — falling back to hybrid pipeline")
+            data = run_deterministic_pipeline(query_for_search, search_budget, autocorrect=False)
+            data["preferences"] = preferences
+            data["user_message"] = user_message
+            data["interpreted"] = intent
             data["gemini_error"] = str(exc)
-            if not agent_mode:
+            try:
+                narrative = synthesize_with_gemini(user_message, data, chat_history)
+                narrative = (
+                    f"**Note:** Full agent mode failed ({exc}). "
+                    f"Showing hybrid analysis instead.\n\n{narrative}"
+                )
+            except Exception as exc2:
+                narrative = format_pipeline_response(data)
+                narrative = (
+                    f"**AI note:** Agent and Gemini unavailable.\n\n{narrative}"
+                )
+                data["gemini_error"] = str(exc2)
+    elif agent_mode:
+        data = run_deterministic_pipeline(query_for_search, search_budget, autocorrect=False)
+        data["preferences"] = preferences
+        data["user_message"] = user_message
+        data["interpreted"] = intent
+        narrative = format_pipeline_response(data)
+        data["gemini_error"] = "No GOOGLE_API_KEY in .env"
+    else:
+        data = run_deterministic_pipeline(query_for_search, search_budget, autocorrect=False)
+        data["preferences"] = preferences
+        data["user_message"] = user_message
+        data["interpreted"] = intent
+
+        if has_gemini_api_key():
+            try:
+                narrative = synthesize_with_gemini(user_message, data, chat_history)
+            except Exception as exc:
+                logger.exception("Gemini layer failed")
+                data["gemini_error"] = str(exc)
                 narrative = format_pipeline_response(data)
                 narrative = (
                     f"**AI note:** Gemini unavailable ({exc}). "
                     f"Showing live scrape results below.\n\n{narrative}"
                 )
-            else:
-                raise
-    else:
-        narrative = format_pipeline_response(data)
-        data["gemini_error"] = "No GOOGLE_API_KEY in .env"
+        else:
+            narrative = format_pipeline_response(data)
+            data["gemini_error"] = "No GOOGLE_API_KEY in .env"
 
     return {
         "data": data,

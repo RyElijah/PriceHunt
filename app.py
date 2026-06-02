@@ -254,6 +254,12 @@ if search_clicked:
                         + (f" · {interp.get('preferences')}" if interp.get("preferences") else "")
                     )
 
+                if result.get("mode") == "agent":
+                    st.caption(
+                        "Full **agent mode** — Gemini called search & score tools. "
+                        f"{len(data.get('listings') or [])} listing(s) shown below."
+                    )
+
                 if not api_ok:
                     st.info(
                         "Live listings loaded. Add `GOOGLE_API_KEY` to `.env` and restart "
