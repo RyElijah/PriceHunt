@@ -102,50 +102,6 @@ flowchart TB
 
 ---
 
-## Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/RyElijah/PriceHunt.git
-cd pricehunt
-```
-
-### 2. Create a virtual environment
-
-```bash
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-playwright install chromium
-```
-
-### 4. Configure environment
-
-Copy the example env file and add your Gemini key:
-
-```bash
-copy .env.example .env   # Windows
-# cp .env.example .env   # macOS / Linux
-```
-
-Edit `.env`:
-
-```env
-GOOGLE_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
-PRICEHUNT_USE_PLAYWRIGHT=1
-```
 
 | Variable | Description |
 |----------|-------------|
@@ -190,22 +146,7 @@ Hybrid is recommended for accurate listing data.
 
 ---
 
-## Publishing to GitHub
 
-From the project folder:
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: PriceHunt AI shopping assistant"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/pricehunt.git
-git push -u origin main
-```
-
-**Before you push:** ensure `.env` is not committed (it is listed in `.gitignore`). Only share `.env.example`.
-
-Create the repo on GitHub first: **New repository** → name it (e.g. `pricehunt`) → do not add a README if you already have one locally → use the commands above.
 
 ---
 
@@ -218,15 +159,7 @@ Create the repo on GitHub first: **New repository** → name it (e.g. `pricehunt
 
 ---
 
-## Project documentation (course submission)
 
-| Document | Path |
-|----------|------|
-| **Project report (5–8 pages)** | [`docs/PROJECT_REPORT.md`](docs/PROJECT_REPORT.md) → export to PDF |
-| **Demo video script (3–5 min)** | [`docs/DEMO_VIDEO_SCRIPT.md`](docs/DEMO_VIDEO_SCRIPT.md) |
-| **Submission checklist** | [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) |
-
----
 
 
 ## Troubleshooting
